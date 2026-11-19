@@ -76,11 +76,11 @@ nav button[hidden]{display:none}
 </style>
 </head>
 <body class="out">
-<div id="login"><h1>Raw Material Stock</h1><div class="sub">Log masuk</div>
+<div id="login"><h1>Stock System</h1><div class="sub">Log masuk</div>
 <label>Emel<input id="le" type="email" autocomplete="username"></label>
 <label>Kata laluan<input id="lp" type="password" autocomplete="current-password"></label>
 <button class="primary" data-act="login">Log masuk</button><div id="lm"></div></div>
-<header><h1>Raw Material Stock</h1><div class="sub" id="sub"></div></header>
+<header><h1 id="ttl">Raw Material Stock</h1><div class="sub" id="sub"></div><div id="mods"></div></header>
 <main id="app"></main>
 <nav id="tabs">
 <button data-act="tab" data-tab="dash">Dashboard</button>
@@ -93,7 +93,9 @@ nav button[hidden]{display:none}
 <script>
 const SB_URL="https://xrlzyrorlwgsnkrkodpq.supabase.co",SB_KEY="sb_publishable_iIhF-ZnPhY5AxLiPUjAi4Q_9QVEDuWt";
 const SB=supabase.createClient(SB_URL,SB_KEY);
-let PRODUCTS=[],ME=null;const PID={};
+let PRODUCTS=[],ME=null,MOD='raw',PROD=[],ALLTX=[];const PID={},NM={},UNIT={};
+const U=p=>UNIT[p]||'Kg';
+const qs=(l,f)=>{const m={};l.forEach(x=>{const u=U(x.p);m[u]=(m[u]||0)+f(x)});const k=Object.keys(m);return k.length?k.map(u=>fmt(m[u])+' '+u).join(' · '):'0 '+(MOD==='raw'?'Kg':'Pcs')};
 const ALLOW={superuser:["dash","stok","tambah","rekod","kiraan","set"],operator:["dash","stok","tambah","rekod","set"],viewer:["dash","stok","rekod","set"]};
 const emsg=e=>/row-level|permission/i.test(e.message)?"Anda tiada kebenaran untuk tindakan ini.":e.message;
 const KEY='stok_mentah_v1',EPS=0.0005,RANK={OB:0,IN:1,OUT:2};
@@ -124,23 +126,24 @@ dash(){
   const ok=mv.filter(x=>x.d.slice(0,10)>=from);
   const sum=(l,t)=>l.filter(x=>x.type===t).reduce((a,x)=>a+x.q,0);
   const counted=PRODUCTS.filter(hasOB),zero=counted.filter(p=>bal(p)<=EPS);
-  const days=Array.from({length:14},(_,i)=>sh(A,i-13)).map(d=>{const l=mv.filter(x=>x.d.slice(0,10)===d);return{d,i:sum(l,'IN'),o:sum(l,'OUT')}});
+  const CU=MOD==='raw'?'Kg':'Pcs';
+  const days=Array.from({length:14},(_,i)=>sh(A,i-13)).map(d=>{const l=mv.filter(x=>x.d.slice(0,10)===d&&U(x.p)===CU);return{d,i:sum(l,'IN'),o:sum(l,'OUT')}});
   const mx=Math.max(1,...days.map(x=>Math.max(x.i,x.o)));
-  const by={};ok.filter(x=>x.type==='OUT').forEach(x=>by[x.p]=(by[x.p]||0)+x.q);
+  const by={};ok.filter(x=>x.type==='OUT'&&U(x.p)===CU).forEach(x=>by[x.p]=(by[x.p]||0)+x.q);
   const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,5),tm=top.length?top[0][1]:1;
   const low=counted.filter(p=>bal(p)>EPS).sort((a,b)=>bal(a)-bal(b)).slice(0,5);
   const lastN=t=>[...mv].filter(x=>x.type===t).sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
-  const rl=l=>l.map(x=>`<div class="r"><span class="n">${esc(x.p)}</span><span class="v ${x.type==='OUT'?'out':'in'}"><b>${x.type==='OUT'?'−':'+'}${fmt(x.q)}</b> Kg</span><span class="m">${dmy(x.d)} · ${esc(x.n)}</span></div>`).join('')||'<div class="empty">Belum ada rekod.</div>';
+  const rl=l=>l.map(x=>`<div class="r"><span class="n">${esc(x.p)}</span><span class="v ${x.type==='OUT'?'out':'in'}"><b>${x.type==='OUT'?'−':'+'}${fmt(x.q)}</b> ${U(x.p)}</span><span class="m">${dmy(x.d)} · ${esc(x.n)}</span></div>`).join('')||'<div class="empty">Belum ada rekod.</div>';
   const rw=(n,v,b)=>`<div class="r"><span class="n">${esc(n)}</span><span class="v">${v}</span>${b===undefined?'':`<span class="hb"><i style="width:${b}%"></i></span>`}</div>`;
   return chips(dp,[['h','Hari ini'],['7','7 hari'],['m','Bulan ini'],['a','Semua']],'dp')
-  +`<div class="kp"><div class="k"><small>Diterima</small><b class="in">${fmt(sum(ok,'IN'))} Kg</b></div><div class="k"><small>Dikeluarkan</small><b class="out">${fmt(sum(ok,'OUT'))} Kg</b></div>
-  <div class="k"><small>Jumlah baki (${counted.length} bahan dikira)</small><b>${fmt(counted.reduce((a,p)=>a+bal(p),0))} Kg</b></div>
+  +`<div class="kp"><div class="k"><small>Diterima</small><b class="in">${qs(ok.filter(x=>x.type==='IN'),x=>x.q)}</b></div><div class="k"><small>Dikeluarkan</small><b class="out">${qs(ok.filter(x=>x.type==='OUT'),x=>x.q)}</b></div>
+  <div class="k"><small>Jumlah baki (${counted.length} bahan dikira)</small><b>${qs(counted.map(p=>({p,q:bal(p)})),x=>x.q)}</b></div>
   <div class="k"><small>Perlu perhatian</small><b class="${zero.length?'out':''}">${zero.length} habis</b><small>${PRODUCTS.length-counted.length} belum dikira</small></div></div>
-  <h2>14 hari terakhir</h2><div class="ch">${days.map(x=>`<div class="cd"><div class="cb"><i class="bi" style="height:${x.i/mx*100}%" title="Masuk ${fmt(x.i)} Kg"></i><i class="bo" style="height:${x.o/mx*100}%" title="Keluar ${fmt(x.o)} Kg"></i></div><span>${x.d.slice(8)}</span></div>`).join('')}</div>
+  <h2>14 hari terakhir (${CU})</h2><div class="ch">${days.map(x=>`<div class="cd"><div class="cb"><i class="bi" style="height:${x.i/mx*100}%" title="Masuk ${fmt(x.i)} ${CU}"></i><i class="bo" style="height:${x.o/mx*100}%" title="Keluar ${fmt(x.o)} ${CU}"></i></div><span>${x.d.slice(8)}</span></div>`).join('')}</div>
   <div class="lg"><i class="bi"></i>Masuk<i class="bo"></i>Keluar</div>
-  <h2>Paling banyak dikeluarkan</h2>${top.map(([p,v])=>rw(p,`<b>${fmt(v)}</b> Kg`,v/tm*100)).join('')||'<div class="empty">Belum ada pengeluaran dalam tempoh ini.</div>'}
+  <h2>Paling banyak dikeluarkan (${CU})</h2>${top.map(([p,v])=>rw(p,`<b>${fmt(v)}</b> ${CU}`,v/tm*100)).join('')||'<div class="empty">Belum ada pengeluaran dalam tempoh ini.</div>'}
   <h2>Habis stok</h2>${zero.map(p=>rw(p,'<span class="tag t-z">Habis</span>')).join('')||'<div class="empty">Tiada bahan habis.</div>'}
-  <h2>Baki paling sedikit</h2>${low.map(p=>rw(p,`<b>${fmt(bal(p))}</b> Kg`)).join('')||'<div class="empty">Belum ada bahan dikira.</div>'}
+  <h2>Baki paling sedikit</h2>${low.map(p=>rw(p,`<b>${fmt(bal(p))}</b> ${U(p)}`)).join('')||'<div class="empty">Belum ada bahan dikira.</div>'}
   <h2>5 terakhir diterima</h2>${rl(lastN('IN'))}
   <h2>5 terakhir dikeluarkan</h2>${rl(lastN('OUT'))}`;
 },
@@ -155,7 +158,7 @@ tambah(){
   <label>Bahan<input id="fp" list="pl" placeholder="Taip untuk cari bahan" autocomplete="off"></label>
   <datalist id="pl">${PRODUCTS.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
   <div class="hint" id="fb"></div>
-  <label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="decimal" step="any" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><select id="fu" style="margin-top:0"><option value="kg">Kg</option><option value="g">g</option></select></div></label><div class="hint" id="fh"></div>
+  ${MOD==='raw'?`<label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="decimal" step="any" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><select id="fu" style="margin-top:0"><option value="kg">Kg</option><option value="g">g</option></select></div></label>`:`<label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="numeric" step="1" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><span id="fut" class="sub" style="text-align:center">Pcs / Roll</span></div></label>`}<div class="hint" id="fh"></div>
   <label>Tarikh dan masa<input id="fd" type="datetime-local" min="${S.start}T00:00" value="${d.toISOString().slice(0,16)}"></label>
   <label>Nama<input id="fn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>
   <label>Catatan (pilihan)<input id="fr" autocomplete="off"></label>
@@ -163,59 +166,62 @@ tambah(){
 },
 rekod(){return search('Cari bahan atau nama')+chips(rt,[['all','Semua'],['IN','Masuk'],['OUT','Keluar'],['OB','Kiraan']],'rt')+'<div id="list"></div>'},
 kiraan(){return `<p class="sub">Kira stok fizikal dan masukkan di sini. Nilai ini jadi baki permulaan pada ${dmy(S.start+'T00:00').slice(0,10)}.</p>
-  <label>Dikira oleh<input id="cn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>${ME.role==='superuser'?`<h2>Tambah bahan baharu</h2><div class="ob" style="grid-template-columns:1fr auto"><input id="np" placeholder="Nama bahan" autocomplete="off" style="text-align:left"><button data-act="addprod">Tambah</button></div><div id="npm"></div>`:''}<div style="height:8px"></div>`+search('Cari bahan')+'<div id="list"></div>'},
+  <label>Dikira oleh<input id="cn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>${ME.role==='superuser'?`<h2>${MOD==='raw'?'Tambah bahan baharu':'Tambah item baharu'}</h2><div class="ob" style="grid-template-columns:${MOD==='raw'?'1fr auto':'1fr 84px auto'}"><input id="np" placeholder="${MOD==='raw'?'Nama bahan':'Nama item'}" autocomplete="off" style="text-align:left">${MOD==='raw'?'':'<select id="npu"><option>Pcs</option><option>Roll</option></select>'}<button data-act="addprod">Tambah</button></div><div id="npm"></div>`:''}<div style="height:8px"></div>`+search('Cari bahan')+'<div id="list"></div>'},
 set(){return `<h2>Akaun</h2><div class="r"><span class="n">${esc(ME.code)}</span><span class="tag t-ok">${{superuser:'Superuser',operator:'Operator / QA & QC',viewer:'View only'}[ME.role]}</span></div>${ME.role==='superuser'?'<h2>Data</h2><button data-act="csv">Eksport rekod (CSV)</button><div id="csvbox"></div>':''}<div style="height:16px"></div><button data-act="logout">Log keluar</button>`}
 };
 const lists={
 stok(){const t=q.toLowerCase();return PRODUCTS.filter(p=>p.toLowerCase().includes(t)).map(p=>({p,o:hasOB(p),b:bal(p)})).filter(r=>flt==='all'||(flt==='u'&&!r.o)||(flt==='z'&&r.o&&r.b<=EPS)||(flt==='a'&&r.o&&r.b>EPS))
-  .map(r=>{const g=tagOf(r.o,r.b);return `<div class="r"><span class="n">${esc(r.p)}</span><span class="v">${r.o?`<b>${fmt(r.b)}</b> Kg`:'–'}</span><span></span><span class="tag ${g[0]}">${g[1]}</span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'},
+  .map(r=>{const g=tagOf(r.o,r.b);return `<div class="r"><span class="n">${esc(r.p)}</span><span class="v">${r.o?`<b>${fmt(r.b)}</b> ${U(r.p)}`:'–'}</span><span></span><span class="tag ${g[0]}">${g[1]}</span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'},
 rekod(){const t=q.toLowerCase();return [...S.tx].filter(x=>(rt==='all'||x.type===rt)&&(x.p+' '+x.n).toLowerCase().includes(t)).sort((a,b)=>a.d<b.d?1:-1).slice(0,200)
   .map(x=>{const s=x.type==='OUT'?'−':x.type==='IN'?'+':'=';const c=x.type==='OUT'?'out':'in';const lab={IN:'Masuk',OUT:'Keluar',OB:'Kiraan permulaan'}[x.type];
-  return `<div class="r ${x.v?'void':''}"><span class="n">${esc(x.p)}</span><span class="v ${c}"><b>${s}${fmt(x.q)}</b> Kg</span>
+  return `<div class="r ${x.v?'void':''}"><span class="n">${esc(x.p)}</span><span class="v ${c}"><b>${s}${fmt(x.q)}</b> ${U(x.p)}</span>
   <span class="m">${lab} · ${dmy(x.d)} · ${esc(x.n)}${x.r?' · '+esc(x.r):''}${x.v?` · Dibatalkan: ${esc(x.vr)}`:''}</span>
   ${!x.v&&x.type!=='OB'&&ME.role==='superuser'?(vid===x.id?`<span class="m"><span class="ob" style="grid-template-columns:1fr auto"><input id="vr" placeholder="Sebab batal"><button data-act="vok" data-k="${x.id}">Sahkan batal</button></span></span><span class="m" id="vm"></span>`:`<span class="m"><button data-act="vask" data-k="${x.id}" style="min-height:32px;padding:2px 10px;font-size:13px">Batal rekod</button></span>`):''}</div>`}).join('')||'<div class="empty">Belum ada rekod.</div>'},
 kiraan(){const t=q.toLowerCase();return PRODUCTS.map((p,i)=>[p,i]).filter(([p])=>p.toLowerCase().includes(t)).map(([p,i])=>{const o=live(S.tx,p).find(x=>x.type==='OB'),g=tagOf(!!o,1);
   return `<div class="r"><span class="n">${esc(p)}</span><span class="tag ${g[0]}" id="tg${i}">${o?'Dikira':'Belum dikira'}</span>
-  <span class="m"><span class="ob"><span class="sub">Kiraan fizikal (Kg)</span><input id="ob${i}" type="number" inputmode="decimal" step="any" min="0" value="${o?o.q:''}"><button data-act="ob" data-k="${i}">Simpan</button></span></span><span class="m" id="om${i}"></span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'}
+  <span class="m"><span class="ob"><span class="sub">Kiraan fizikal (${U(p)})</span><input id="ob${i}" type="number" inputmode="${U(p)==='Kg'?'decimal':'numeric'}" step="${U(p)==='Kg'?'any':'1'}" min="0" value="${o?o.q:''}"><button data-act="ob" data-k="${i}">Simpan</button></span></span><span class="m" id="om${i}"></span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'}
 };
 function updateList(){const el=$('#list');if(el&&lists[tab])el.innerHTML=lists[tab]()}
 function render(){document.querySelectorAll('#tabs button').forEach(b=>{b.hidden=!ALLOW[ME.role].includes(b.dataset.tab);b.classList.toggle('on',b.dataset.tab===tab)});
-  $('#sub').textContent=PRODUCTS.length+' bahan';$('#app').innerHTML=views[tab]();updateList()}
+  $('#sub').textContent=PRODUCTS.length+(MOD==='raw'?' bahan':' item');$('#ttl').textContent=document.title=(MOD==='raw'?'Raw Material Stock':'Packaging Stock');$('#mods').innerHTML=chips(MOD,[['raw','Raw Material'],['pack','Packaging']],'mod');$('#app').innerHTML=views[tab]();updateList()}
 const show=(id,t,k)=>{const e=$(id);if(e)e.innerHTML=`<div class="msg ${k?'k':'e'}">${t}</div>`};
 const acts={
 tab(b){const t=b.dataset.tab;tab=t;q='';vid=null;render();load().then(()=>{if(tab===t&&t!=='tambah'&&t!=='kiraan')render()}).catch(()=>{})},
+mod(b){MOD=b.dataset.k;try{localStorage.setItem('mod',MOD)}catch(e){}applyMod();q='';flt='all';rt='all';vid=null;render()},
 async login(){const {error}=await SB.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});if(error)return show('#lm','Emel atau kata laluan salah.');await boot()},
 dp(b){dp=b.dataset.k;render()},flt(b){flt=b.dataset.k;render()},rt(b){rt=b.dataset.k;render()},mode(b){mode=b.dataset.k;render()},
 async submit(){
-  const p=$('#fp').value.trim(),qty=Math.round((($('#fu').value==='g')?parseFloat($('#fq').value)/1000:parseFloat($('#fq').value))*1000)/1000,d=$('#fd').value,n=$('#fn').value.trim(),r=$('#fr').value.trim();
+  const p=$('#fp').value.trim(),qty=Math.round(((($('#fu')||{}).value==='g')?parseFloat($('#fq').value)/1000:parseFloat($('#fq').value))*1000)/1000,d=$('#fd').value,n=$('#fn').value.trim(),r=$('#fr').value.trim();
   if(!PRODUCTS.includes(p))return show('#fm','Pilih bahan daripada senarai.');
-  if(!(qty>0))return show('#fm','Kuantiti mesti lebih daripada 0 (minimum 1 g).');
+  if(!(qty>0))return show('#fm',MOD==='raw'?'Kuantiti mesti lebih daripada 0 (minimum 1 g).':'Kuantiti mesti lebih daripada 0.');
+  if(MOD==='pack'&&!Number.isInteger(qty))return show('#fm','Kuantiti mesti nombor bulat.');
   if(!d||d<S.start+'T00:00')return show('#fm','Tarikh mesti pada atau selepas tarikh mula sistem.');
   if(!n)return show('#fm','Tulis nama.');
   if(!hasOB(p))return show('#fm','Kiraan permulaan bahan ini belum dibuat. Masukkan di tab Kiraan dahulu.');
   const {error}=await SB.from('transactions').insert({product_id:PID[p],type:mode,qty,occurred_at:new Date(d).toISOString(),staff_name:n,remark:r||null});
   if(error)return show('#fm',esc(emsg(error)));
   await load();cn=n;$('#fq').value='';$('#fr').value='';$('#fp').value='';$('#fb').textContent='';$('#fh').textContent='';
-  show('#fm',`Disimpan (${fmt(qty)} Kg). Baki ${esc(p)} sekarang ${fmt(bal(p))} Kg.`,1)},
+  show('#fm',`Disimpan (${fmt(qty)} ${U(p)}). Baki ${esc(p)} sekarang ${fmt(bal(p))} ${U(p)}.`,1)},
 vask(b){vid=b.dataset.k;updateList()},
 async vok(b){const r=$('#vr').value.trim();if(!r)return show('#vm','Tulis sebab batal.');
   const {error}=await SB.rpc('void_transaction',{p_id:b.dataset.k,p_reason:r});
   if(error)return show('#vm',esc(emsg(error)));vid=null;await load();updateList()},
 async ob(b){const i=+b.dataset.k,p=PRODUCTS[i],v=parseFloat($('#ob'+i).value);
   if(!(v>=0))return show('#om'+i,'Masukkan kiraan fizikal (0 atau lebih).');
+  if(U(p)!=='Kg'&&!Number.isInteger(v))return show('#om'+i,'Kiraan mesti nombor bulat.');
   if(!(cn||$('#cn').value.trim()))return show('#om'+i,'Tulis nama di atas dahulu.');
   cn=$('#cn').value.trim()||cn;
   const {error}=await SB.rpc('set_opening_balance',{p_product:PID[p],p_qty:Math.round(v*1000)/1000,p_staff:cn});
   if(error)return show('#om'+i,esc(emsg(error)));
   await load();$('#tg'+i).className='tag t-ok';$('#tg'+i).textContent='Dikira';show('#om'+i,'Disimpan.',1)},
 async csv(){const h='Tarikh,Jenis,Bahan,Kuantiti,Unit,Nama,Catatan,Batal';const c=s=>'"'+String(s||'').replace(/"/g,'""')+'"';
-  csvText=[h,...[...S.tx].sort((a,b)=>a.d<b.d?-1:1).map(x=>[x.d,x.type,c(x.p),x.q,'Kg',c(x.n),c(x.r),c(x.v?x.vr:'')].join(','))].join('\n');
+  csvText=[h,...[...S.tx].sort((a,b)=>a.d<b.d?-1:1).map(x=>[x.d,x.type,c(x.p),x.q,U(x.p),c(x.n),c(x.r),c(x.v?x.vr:'')].join(','))].join('\n');
   let dl=null;try{dl=await window.claude.use('downloads')}catch(e){}
-  if(dl){try{await dl.save({filename:'rekod-stok.csv',data:new Blob([csvText],{type:'text/csv'})});return}catch(e){if(e&&e.code==='declined')return}}
+  if(dl){try{await dl.save({filename:'rekod-'+(MOD==='raw'?'raw-material':'packaging')+'.csv',data:new Blob([csvText],{type:'text/csv'})});return}catch(e){if(e&&e.code==='declined')return}}
   $('#csvbox').innerHTML='<p class="sub">Salin teks ini ke Excel:</p><textarea readonly style="width:100%;height:140px">'+esc(csvText)+'</textarea>'},
 async addprod(){const n=$('#np').value.trim();if(!n)return show('#npm','Tulis nama bahan.');
-  if(PRODUCTS.some(x=>x.toLowerCase()===n.toLowerCase()))return show('#npm','Bahan ini sudah ada.');
-  const {error}=await SB.from('products').insert({name:n,unit:'Kg'});
+  if(Object.keys(PID).some(x=>x.toLowerCase()===n.toLowerCase()))return show('#npm','Bahan ini sudah ada.');
+  const {error}=await SB.from('products').insert({name:n,unit:MOD==='raw'?'Kg':$('#npu').value,category:MOD==='raw'?'raw':'packaging'});
   if(error)return show('#npm',esc(emsg(error)));
   await load();render();show('#npm','Ditambah: '+esc(n)+'. Masukkan kiraan fizikal di senarai bawah.',1)},
 async logout(){await SB.auth.signOut();location.reload()}
@@ -225,7 +231,7 @@ const hintQty=()=>{const f=$('#fh'),v=parseFloat(($('#fq')||{}).value),u=($('#fu
 document.addEventListener('input',e=>{
   if(e.target.id==='fq'||e.target.id==='fu')hintQty();
   if(e.target.id==='q'){q=e.target.value;updateList()}
-  if(e.target.id==='fp'){const p=e.target.value.trim(),f=$('#fb');f.textContent=!p?'':!PRODUCTS.includes(p)?'Bahan tidak dalam senarai.':hasOB(p)?'Baki sekarang: '+fmt(bal(p))+' Kg':'Kiraan permulaan belum dibuat.'}
+  if(e.target.id==='fp'){const p=e.target.value.trim(),f=$('#fb'),ut=$('#fut');if(ut)ut.textContent=UNIT[p]||'Pcs / Roll';f.textContent=!p?'':!PRODUCTS.includes(p)?'Bahan tidak dalam senarai.':hasOB(p)?'Baki sekarang: '+fmt(bal(p))+' '+U(p):'Kiraan permulaan belum dibuat.'}
 });
 document.addEventListener('change',e=>{
   if(e.target.id==='fu')hintQty();
@@ -235,12 +241,13 @@ document.addEventListener('change',e=>{
 });
 const toLocal=s=>{const d=new Date(s);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
 async function all(mk){let o=[],f=0;for(;;){const {data,error}=await mk().range(f,f+999);if(error)throw error;o=o.concat(data);if(data.length<1000)return o;f+=1000}}
+function applyMod(){const cat=MOD==='raw'?'raw':'packaging',ps=PROD.filter(x=>x.category===cat),ids=new Set(ps.map(x=>x.id));PRODUCTS=ps.map(x=>x.name);
+  S.tx=ALLTX.filter(r=>ids.has(r.product_id)).map(r=>({id:r.id,type:r.type,p:NM[r.product_id],q:+r.qty,d:toLocal(r.occurred_at),n:r.staff_name||'',r:r.remark||'',v:r.voided?1:0,vr:r.void_reason||''}))}
 async function load(){
-  const [pr,tx,st,se]=await Promise.all([all(()=>SB.from('products').select('id,name').eq('active',true).order('id')),
+  const [pr,tx,st,se]=await Promise.all([all(()=>SB.from('products').select('id,name,unit,category').eq('active',true).order('id')),
     all(()=>SB.from('transactions').select('*').order('occurred_at').order('id')),
     all(()=>SB.from('staff').select('name').eq('active',true).order('name')),all(()=>SB.from('app_settings').select('key,value'))]);
-  const nm={};PRODUCTS=pr.map(x=>{nm[x.id]=x.name;PID[x.name]=x.id;return x.name});
-  S.tx=tx.map(r=>({id:r.id,type:r.type,p:nm[r.product_id],q:+r.qty,d:toLocal(r.occurred_at),n:r.staff_name||'',r:r.remark||'',v:r.voided?1:0,vr:r.void_reason||''}));
+  PROD=pr;pr.forEach(x=>{NM[x.id]=x.name;PID[x.name]=x.id;UNIT[x.name]=x.unit});ALLTX=tx;applyMod();
   S.staff=st.map(x=>x.name);const s=se.find(x=>x.key==='start_date');if(s)S.start=s.value;
 }
 async function boot(){
@@ -249,7 +256,7 @@ async function boot(){
     if(!session){document.body.className='out';return}
     const {data:pf}=await SB.from('profiles').select('code,role').eq('user_id',session.user.id).maybeSingle();
     if(!pf){await SB.auth.signOut();document.body.className='out';show('#lm','Akaun ini belum diberi peranan. Hubungi pentadbir.');return}
-    ME=pf;await load();document.body.className='';tab='dash';render();
+    ME=pf;try{MOD=localStorage.getItem('mod')==='pack'?'pack':'raw'}catch(e){}await load();document.body.className='';tab='dash';render();
   }catch(e){document.body.className='out';show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')acts.login()});
