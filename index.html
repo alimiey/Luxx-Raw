@@ -82,11 +82,16 @@ body:not(.out) #login{display:none}
 nav button[hidden]{display:none}
 #off{background:var(--redbg);color:var(--red);text-align:center;padding:6px 12px;font-size:13px}
 #off[hidden]{display:none}
+#splash{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .35s}
+body.boot #splash{opacity:1;pointer-events:auto}
+#splash img{width:min(72vw,340px);height:auto}
+#login .logo{display:block;width:min(240px,64vw);margin:0 auto;border-radius:22px}
 </style>
 </head>
-<body class="out">
+<body class="out boot">
+<div id="splash"><img src="icons/logo.png" alt="Luxx IMS"></div>
 <div id="off" hidden>Tiada internet. Rekod tidak boleh disimpan sehingga bersambung semula.</div>
-<div id="login"><h1>Stock System</h1><div class="sub">Log masuk</div>
+<div id="login"><img class="logo" src="icons/logo.png" alt="Luxx IMS - Inventory Management System"><div class="sub" style="margin:12px 0 4px;text-align:center">Log masuk</div>
 <label>Emel<input id="le" type="email" autocomplete="username"></label>
 <label>Kata laluan<input id="lp" type="password" autocomplete="current-password"></label>
 <button class="primary" data-act="login">Log masuk</button><div id="lm"></div></div>
@@ -264,14 +269,16 @@ async function load(){
   PROD=pr;pr.forEach(x=>{NM[x.id]=x.name;PID[x.name]=x.id;UNIT[x.name]=x.unit});ALLTX=tx;applyMod();
   S.staff=st.map(x=>x.name);const s=se.find(x=>x.key==='start_date');if(s)S.start=s.value;
 }
-async function boot(){
+const T0=Date.now();
+async function boot(){await boot0();const w=800-(Date.now()-T0);if(w>0)await new Promise(r=>setTimeout(r,w));document.body.classList.remove('boot')}
+async function boot0(){
   try{
     const {data:{session}}=await SB.auth.getSession();
-    if(!session){document.body.className='out';return}
+    if(!session){document.body.classList.add('out');return}
     const {data:pf}=await SB.from('profiles').select('code,role').eq('user_id',session.user.id).maybeSingle();
-    if(!pf){await SB.auth.signOut();document.body.className='out';show('#lm','Akaun ini belum diberi peranan. Hubungi pentadbir.');return}
-    ME=pf;try{MOD=localStorage.getItem('mod')==='pack'?'pack':'raw'}catch(e){}await load();document.body.className='';tab='dash';render();
-  }catch(e){document.body.className='out';show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
+    if(!pf){await SB.auth.signOut();document.body.classList.add('out');show('#lm','Akaun ini belum diberi peranan. Hubungi pentadbir.');return}
+    ME=pf;try{MOD=localStorage.getItem('mod')==='pack'?'pack':'raw'}catch(e){}await load();document.body.classList.remove('out');tab='dash';render();
+  }catch(e){document.body.classList.add('out');show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')acts.login()});
 const upd=()=>{$('#off').hidden=navigator.onLine};addEventListener('online',upd);addEventListener('offline',upd);upd();

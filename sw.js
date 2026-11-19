@@ -1,6 +1,6 @@
 // Service worker Luxx IMS: cache rangka app sahaja. Data stok (Supabase) TIDAK pernah di-cache.
-const V = 'luxx-ims-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const V = 'luxx-ims-v2';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/logo.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
