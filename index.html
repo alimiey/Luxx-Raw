@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Raw Material Stock</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef1ef;--card:#fff;--ink:#1c2a2d;--mute:#5d6e70;--line:#d6ddda;--accent:#0e6b5c;--on:#fff;--amber:#8a5a00;--amberbg:#fbefd2;--red:#a8231b;--redbg:#fbe0dd;--greenbg:#d9f0e8;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141c1e;--card:#1d282b;--ink:#e6eeec;--mute:#93a5a7;--line:#2f3f42;--accent:#3fbfa6;--on:#06201b;--amber:#f0c36a;--amberbg:#3a2f12;--red:#ff9c92;--redbg:#3d1c19;--greenbg:#143229;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141c1e;--card:#1d282b;--ink:#e6eeec;--mute:#93a5a7;--line:#2f3f42;--accent:#3fbfa6;--on:#06201b;--amber:#f0c36a;--amberbg:#3a2f12;--red:#ff9c92;--redbg:#3d1c19;--greenbg:#143229;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:76px}
+header{padding:16px 16px 4px;max-width:720px;margin:0 auto}
+h1{font-size:20px;margin:0;font-weight:600}
+.sub{color:var(--mute);font-size:13px}
+main{max-width:720px;margin:0 auto;padding:8px 16px 24px}
+.prog{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0 12px}
+.prog b{font-size:22px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);min-height:44px}
+label{display:block;margin:12px 0 0;font-weight:500;font-size:14px}
+label input,label select{margin-top:4px;font-weight:400}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;min-height:40px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.primary{background:var(--accent);color:var(--on);border-color:var(--accent);font-weight:600;width:100%;min-height:46px;margin-top:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.chips button{border-radius:20px;padding:4px 12px;min-height:34px;font-size:13px}
+.chips .on,.seg .on{background:var(--accent);color:var(--on);border-color:var(--accent)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.seg button{min-height:46px;font-weight:600}
+.r{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.r .n{font-weight:500}
+.r .v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r .m{color:var(--mute);font-size:13px;grid-column:1/-1}
+.tag{font-size:12px;border-radius:4px;padding:1px 7px;justify-self:end;white-space:nowrap}
+.t-ok{background:var(--greenbg);color:var(--accent)}.t-z{background:var(--redbg);color:var(--red)}.t-u{background:var(--amberbg);color:var(--amber)}
+.hint{color:var(--mute);font-size:13px;min-height:20px;margin-top:4px}
+.msg{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:14px}
+.msg.e{background:var(--redbg);color:var(--red)}.msg.k{background:var(--greenbg);color:var(--accent)}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+.void .n,.void .v{text-decoration:line-through;color:var(--mute)}
+.ob{display:grid;grid-template-columns:1fr 92px auto;gap:8px;align-items:center}
+.ob input{min-height:40px;padding:6px 8px;text-align:right}
+.in{color:var(--accent)}.out{color:var(--red)}
+.stf{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.stf span{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:2px 4px 2px 10px;font-size:13px}
+.stf button{border:0;background:none;min-height:24px;padding:0 6px;color:var(--mute)}
+h2{font-size:15px;margin:22px 0 4px}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.k b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.k small{color:var(--mute);font-size:12px}
+.ch{display:flex;gap:3px;align-items:stretch;height:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 8px 6px}
+.cd{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.cb{flex:1;display:flex;align-items:flex-end;gap:1px;width:100%;justify-content:center}
+.cb i{display:block;width:42%;max-width:9px;min-height:1px;border-radius:2px 2px 0 0}
+.bi{background:var(--accent)}.bo{background:var(--red)}
+.cd span{font-size:10px;color:var(--mute)}
+.lg{font-size:12px;color:var(--mute);margin:6px 0 0}
+.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 10px}.lg i:first-child{margin-left:0}
+.hb{height:6px;background:var(--line);border-radius:3px;grid-column:1/-1}.hb i{display:block;height:100%;background:var(--red);border-radius:3px}
+nav button{font-size:12px;padding:8px 2px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;border:0;border-radius:0;background:none;min-height:56px;font-size:13px;color:var(--mute)}
+nav button.on{color:var(--accent);font-weight:600;box-shadow:inset 0 3px 0 var(--accent)}
+body.out header,body.out main,body.out nav{display:none}
+body:not(.out) #login{display:none}
+#login{max-width:360px;margin:12vh auto;padding:16px}
+nav button[hidden]{display:none}
+</style>
+</head>
+<body class="out">
+<div id="login"><h1>Raw Material Stock</h1><div class="sub">Log masuk</div>
+<label>Emel<input id="le" type="email" autocomplete="username"></label>
+<label>Kata laluan<input id="lp" type="password" autocomplete="current-password"></label>
+<button class="primary" data-act="login">Log masuk</button><div id="lm"></div></div>
+<header><h1>Raw Material Stock</h1><div class="sub" id="sub"></div></header>
+<main id="app"></main>
+<nav id="tabs">
+<button data-act="tab" data-tab="dash">Dashboard</button>
+<button data-act="tab" data-tab="stok">Stok</button>
+<button data-act="tab" data-tab="tambah">Tambah</button>
+<button data-act="tab" data-tab="rekod">Rekod</button>
+<button data-act="tab" data-tab="kiraan">Kiraan</button>
+<button data-act="tab" data-tab="set">Akaun</button>
+</nav>
+<script>
+const SB_URL="https://xrlzyrorlwgsnkrkodpq.supabase.co",SB_KEY="sb_publishable_iIhF-ZnPhY5AxLiPUjAi4Q_9QVEDuWt";
+const SB=supabase.createClient(SB_URL,SB_KEY);
+let PRODUCTS=[],ME=null;const PID={};
+const ALLOW={superuser:["dash","stok","tambah","rekod","kiraan","set"],operator:["dash","stok","tambah","rekod","set"],viewer:["dash","stok","rekod","set"]};
+const emsg=e=>/row-level|permission/i.test(e.message)?"Anda tiada kebenaran untuk tindakan ini.":e.message;
+const KEY='stok_mentah_v1',EPS=0.0005,RANK={OB:0,IN:1,OUT:2};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>(+Number(n).toFixed(3)).toLocaleString('en-MY');
+const dmy=s=>{const d=new Date(s);return isNaN(d)?s:d.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})};
+let S={tx:[],staff:['Anisa','Daim','Hilman','Fahmi','Sofia','Thira','Afrina','Yusry','Auni','Ali','Muaz','Siti','Alia','Athirah','Aiman'],start:'2026-11-01'};
+const save=()=>{};
+let tab='dash',dp='m',mode='IN',q='',flt='all',rt='all',vid=null,cn='',csvText='';
+const live=(l,p)=>l.filter(t=>t.p===p&&!t.v);
+const bal=(p,l=S.tx)=>live(l,p).reduce((a,t)=>a+(t.type==='OUT'?-t.q:t.q),0);
+const hasOB=p=>live(S.tx,p).some(t=>t.type==='OB');
+function valid(l,p){let b=0;for(const t of live(l,p).sort((a,c)=>a.d<c.d?-1:a.d>c.d?1:RANK[a.type]-RANK[c.type])){b+=t.type==='OUT'?-t.q:t.q;if(b<-EPS)return false}return true}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const tagOf=(o,b)=>!o?['t-u','Belum dikira']:b<=EPS?['t-z','Habis']:['t-ok','Ada'];
+const staffOpts=sel=>'<option value="">Pilih nama</option>'+S.staff.map(n=>`<option${n===sel?' selected':''}>${esc(n)}</option>`).join('');
+const chips=(cur,arr,act)=>'<div class="chips">'+arr.map(([k,l])=>`<button data-act="${act}" data-k="${k}" class="${cur===k?'on':''}">${l}</button>`).join('')+'</div>';
+const search=ph=>`<input id="q" type="search" placeholder="${ph}" value="${esc(q)}" autocomplete="off">`;
+
+const views={
+dash(){
+  const td=new Date();td.setMinutes(td.getMinutes()-td.getTimezoneOffset());
+  const today=td.toISOString().slice(0,10),A=today<S.start?S.start:today;
+  const sh=(s,n)=>{const d=new Date(s+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+  const from={h:A,'7':sh(A,-6),m:A.slice(0,8)+'01',a:S.start}[dp];
+  const mv=S.tx.filter(x=>!x.v&&x.type!=='OB'&&x.d.slice(0,10)<=A);
+  const ok=mv.filter(x=>x.d.slice(0,10)>=from);
+  const sum=(l,t)=>l.filter(x=>x.type===t).reduce((a,x)=>a+x.q,0);
+  const counted=PRODUCTS.filter(hasOB),zero=counted.filter(p=>bal(p)<=EPS);
+  const days=Array.from({length:14},(_,i)=>sh(A,i-13)).map(d=>{const l=mv.filter(x=>x.d.slice(0,10)===d);return{d,i:sum(l,'IN'),o:sum(l,'OUT')}});
+  const mx=Math.max(1,...days.map(x=>Math.max(x.i,x.o)));
+  const by={};ok.filter(x=>x.type==='OUT').forEach(x=>by[x.p]=(by[x.p]||0)+x.q);
+  const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,5),tm=top.length?top[0][1]:1;
+  const low=counted.filter(p=>bal(p)>EPS).sort((a,b)=>bal(a)-bal(b)).slice(0,5);
+  const lastN=t=>[...mv].filter(x=>x.type===t).sort((a,b)=>a.d<b.d?1:-1).slice(0,5);
+  const rl=l=>l.map(x=>`<div class="r"><span class="n">${esc(x.p)}</span><span class="v ${x.type==='OUT'?'out':'in'}"><b>${x.type==='OUT'?'−':'+'}${fmt(x.q)}</b> Kg</span><span class="m">${dmy(x.d)} · ${esc(x.n)}</span></div>`).join('')||'<div class="empty">Belum ada rekod.</div>';
+  const rw=(n,v,b)=>`<div class="r"><span class="n">${esc(n)}</span><span class="v">${v}</span>${b===undefined?'':`<span class="hb"><i style="width:${b}%"></i></span>`}</div>`;
+  return chips(dp,[['h','Hari ini'],['7','7 hari'],['m','Bulan ini'],['a','Semua']],'dp')
+  +`<div class="kp"><div class="k"><small>Diterima</small><b class="in">${fmt(sum(ok,'IN'))} Kg</b></div><div class="k"><small>Dikeluarkan</small><b class="out">${fmt(sum(ok,'OUT'))} Kg</b></div>
+  <div class="k"><small>Jumlah baki (${counted.length} bahan dikira)</small><b>${fmt(counted.reduce((a,p)=>a+bal(p),0))} Kg</b></div>
+  <div class="k"><small>Perlu perhatian</small><b class="${zero.length?'out':''}">${zero.length} habis</b><small>${PRODUCTS.length-counted.length} belum dikira</small></div></div>
+  <h2>14 hari terakhir</h2><div class="ch">${days.map(x=>`<div class="cd"><div class="cb"><i class="bi" style="height:${x.i/mx*100}%" title="Masuk ${fmt(x.i)} Kg"></i><i class="bo" style="height:${x.o/mx*100}%" title="Keluar ${fmt(x.o)} Kg"></i></div><span>${x.d.slice(8)}</span></div>`).join('')}</div>
+  <div class="lg"><i class="bi"></i>Masuk<i class="bo"></i>Keluar</div>
+  <h2>Paling banyak dikeluarkan</h2>${top.map(([p,v])=>rw(p,`<b>${fmt(v)}</b> Kg`,v/tm*100)).join('')||'<div class="empty">Belum ada pengeluaran dalam tempoh ini.</div>'}
+  <h2>Habis stok</h2>${zero.map(p=>rw(p,'<span class="tag t-z">Habis</span>')).join('')||'<div class="empty">Tiada bahan habis.</div>'}
+  <h2>Baki paling sedikit</h2>${low.map(p=>rw(p,`<b>${fmt(bal(p))}</b> Kg`)).join('')||'<div class="empty">Belum ada bahan dikira.</div>'}
+  <h2>5 terakhir diterima</h2>${rl(lastN('IN'))}
+  <h2>5 terakhir dikeluarkan</h2>${rl(lastN('OUT'))}`;
+},
+stok(){
+  const done=PRODUCTS.filter(hasOB).length,n=PRODUCTS.length,z=PRODUCTS.filter(p=>hasOB(p)&&bal(p)<=EPS).length;
+  return `<div class="prog"><div><b>${done} / ${n}</b> bahan sudah dikira fizikal</div><div class="sub">${n-done} belum dikira. ${z} habis stok.</div><div class="bar"><i style="width:${done/n*100}%"></i></div></div>`
+  +search('Cari bahan')+chips(flt,[['all','Semua'],['a','Ada'],['z','Habis'],['u','Belum dikira']],'flt')+'<div id="list"></div>';
+},
+tambah(){
+  const d=new Date(Math.max(Date.now(),new Date(S.start+'T08:00')));d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return `<div class="seg"><button data-act="mode" data-k="IN" class="${mode==='IN'?'on':''}">Terima masuk</button><button data-act="mode" data-k="OUT" class="${mode==='OUT'?'on':''}">Keluar</button></div>
+  <label>Bahan<input id="fp" list="pl" placeholder="Taip untuk cari bahan" autocomplete="off"></label>
+  <datalist id="pl">${PRODUCTS.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+  <div class="hint" id="fb"></div>
+  <label>Kuantiti<div class="ob" style="grid-template-columns:1fr 96px;margin-top:4px"><input id="fq" type="number" inputmode="decimal" step="any" min="0" style="text-align:left;min-height:44px;padding:10px 12px"><select id="fu" style="margin-top:0"><option value="kg">Kg</option><option value="g">g</option></select></div></label><div class="hint" id="fh"></div>
+  <label>Tarikh dan masa<input id="fd" type="datetime-local" min="${S.start}T00:00" value="${d.toISOString().slice(0,16)}"></label>
+  <label>Nama<input id="fn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>
+  <label>Catatan (pilihan)<input id="fr" autocomplete="off"></label>
+  <button class="primary" data-act="submit">${mode==='IN'?'Simpan penerimaan':'Simpan pengeluaran'}</button><div id="fm"></div>`;
+},
+rekod(){return search('Cari bahan atau nama')+chips(rt,[['all','Semua'],['IN','Masuk'],['OUT','Keluar'],['OB','Kiraan']],'rt')+'<div id="list"></div>'},
+kiraan(){return `<p class="sub">Kira stok fizikal dan masukkan di sini. Nilai ini jadi baki permulaan pada ${dmy(S.start+'T00:00').slice(0,10)}.</p>
+  <label>Dikira oleh<input id="cn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>${ME.role==='superuser'?`<h2>Tambah bahan baharu</h2><div class="ob" style="grid-template-columns:1fr auto"><input id="np" placeholder="Nama bahan" autocomplete="off" style="text-align:left"><button data-act="addprod">Tambah</button></div><div id="npm"></div>`:''}<div style="height:8px"></div>`+search('Cari bahan')+'<div id="list"></div>'},
+set(){return `<h2>Akaun</h2><div class="r"><span class="n">${esc(ME.code)}</span><span class="tag t-ok">${{superuser:'Superuser',operator:'Operator / QA & QC',viewer:'View only'}[ME.role]}</span></div>${ME.role==='superuser'?'<h2>Data</h2><button data-act="csv">Eksport rekod (CSV)</button><div id="csvbox"></div>':''}<div style="height:16px"></div><button data-act="logout">Log keluar</button>`}
+};
+const lists={
+stok(){const t=q.toLowerCase();return PRODUCTS.filter(p=>p.toLowerCase().includes(t)).map(p=>({p,o:hasOB(p),b:bal(p)})).filter(r=>flt==='all'||(flt==='u'&&!r.o)||(flt==='z'&&r.o&&r.b<=EPS)||(flt==='a'&&r.o&&r.b>EPS))
+  .map(r=>{const g=tagOf(r.o,r.b);return `<div class="r"><span class="n">${esc(r.p)}</span><span class="v">${r.o?`<b>${fmt(r.b)}</b> Kg`:'–'}</span><span></span><span class="tag ${g[0]}">${g[1]}</span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'},
+rekod(){const t=q.toLowerCase();return [...S.tx].filter(x=>(rt==='all'||x.type===rt)&&(x.p+' '+x.n).toLowerCase().includes(t)).sort((a,b)=>a.d<b.d?1:-1).slice(0,200)
+  .map(x=>{const s=x.type==='OUT'?'−':x.type==='IN'?'+':'=';const c=x.type==='OUT'?'out':'in';const lab={IN:'Masuk',OUT:'Keluar',OB:'Kiraan permulaan'}[x.type];
+  return `<div class="r ${x.v?'void':''}"><span class="n">${esc(x.p)}</span><span class="v ${c}"><b>${s}${fmt(x.q)}</b> Kg</span>
+  <span class="m">${lab} · ${dmy(x.d)} · ${esc(x.n)}${x.r?' · '+esc(x.r):''}${x.v?` · Dibatalkan: ${esc(x.vr)}`:''}</span>
+  ${!x.v&&x.type!=='OB'&&ME.role==='superuser'?(vid===x.id?`<span class="m"><span class="ob" style="grid-template-columns:1fr auto"><input id="vr" placeholder="Sebab batal"><button data-act="vok" data-k="${x.id}">Sahkan batal</button></span></span><span class="m" id="vm"></span>`:`<span class="m"><button data-act="vask" data-k="${x.id}" style="min-height:32px;padding:2px 10px;font-size:13px">Batal rekod</button></span>`):''}</div>`}).join('')||'<div class="empty">Belum ada rekod.</div>'},
+kiraan(){const t=q.toLowerCase();return PRODUCTS.map((p,i)=>[p,i]).filter(([p])=>p.toLowerCase().includes(t)).map(([p,i])=>{const o=live(S.tx,p).find(x=>x.type==='OB'),g=tagOf(!!o,1);
+  return `<div class="r"><span class="n">${esc(p)}</span><span class="tag ${g[0]}" id="tg${i}">${o?'Dikira':'Belum dikira'}</span>
+  <span class="m"><span class="ob"><span class="sub">Kiraan fizikal (Kg)</span><input id="ob${i}" type="number" inputmode="decimal" step="any" min="0" value="${o?o.q:''}"><button data-act="ob" data-k="${i}">Simpan</button></span></span><span class="m" id="om${i}"></span></div>`}).join('')||'<div class="empty">Tiada bahan sepadan.</div>'}
+};
+function updateList(){const el=$('#list');if(el&&lists[tab])el.innerHTML=lists[tab]()}
+function render(){document.querySelectorAll('#tabs button').forEach(b=>{b.hidden=!ALLOW[ME.role].includes(b.dataset.tab);b.classList.toggle('on',b.dataset.tab===tab)});
+  $('#sub').textContent=PRODUCTS.length+' bahan';$('#app').innerHTML=views[tab]();updateList()}
+const show=(id,t,k)=>{const e=$(id);if(e)e.innerHTML=`<div class="msg ${k?'k':'e'}">${t}</div>`};
+const acts={
+tab(b){const t=b.dataset.tab;tab=t;q='';vid=null;render();load().then(()=>{if(tab===t&&t!=='tambah'&&t!=='kiraan')render()}).catch(()=>{})},
+async login(){const {error}=await SB.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});if(error)return show('#lm','Emel atau kata laluan salah.');await boot()},
+dp(b){dp=b.dataset.k;render()},flt(b){flt=b.dataset.k;render()},rt(b){rt=b.dataset.k;render()},mode(b){mode=b.dataset.k;render()},
+async submit(){
+  const p=$('#fp').value.trim(),qty=Math.round((($('#fu').value==='g')?parseFloat($('#fq').value)/1000:parseFloat($('#fq').value))*1000)/1000,d=$('#fd').value,n=$('#fn').value.trim(),r=$('#fr').value.trim();
+  if(!PRODUCTS.includes(p))return show('#fm','Pilih bahan daripada senarai.');
+  if(!(qty>0))return show('#fm','Kuantiti mesti lebih daripada 0 (minimum 1 g).');
+  if(!d||d<S.start+'T00:00')return show('#fm','Tarikh mesti pada atau selepas tarikh mula sistem.');
+  if(!n)return show('#fm','Tulis nama.');
+  if(!hasOB(p))return show('#fm','Kiraan permulaan bahan ini belum dibuat. Masukkan di tab Kiraan dahulu.');
+  const {error}=await SB.from('transactions').insert({product_id:PID[p],type:mode,qty,occurred_at:new Date(d).toISOString(),staff_name:n,remark:r||null});
+  if(error)return show('#fm',esc(emsg(error)));
+  await load();cn=n;$('#fq').value='';$('#fr').value='';$('#fp').value='';$('#fb').textContent='';$('#fh').textContent='';
+  show('#fm',`Disimpan (${fmt(qty)} Kg). Baki ${esc(p)} sekarang ${fmt(bal(p))} Kg.`,1)},
+vask(b){vid=b.dataset.k;updateList()},
+async vok(b){const r=$('#vr').value.trim();if(!r)return show('#vm','Tulis sebab batal.');
+  const {error}=await SB.rpc('void_transaction',{p_id:b.dataset.k,p_reason:r});
+  if(error)return show('#vm',esc(emsg(error)));vid=null;await load();updateList()},
+async ob(b){const i=+b.dataset.k,p=PRODUCTS[i],v=parseFloat($('#ob'+i).value);
+  if(!(v>=0))return show('#om'+i,'Masukkan kiraan fizikal (0 atau lebih).');
+  if(!(cn||$('#cn').value.trim()))return show('#om'+i,'Tulis nama di atas dahulu.');
+  cn=$('#cn').value.trim()||cn;
+  const {error}=await SB.rpc('set_opening_balance',{p_product:PID[p],p_qty:Math.round(v*1000)/1000,p_staff:cn});
+  if(error)return show('#om'+i,esc(emsg(error)));
+  await load();$('#tg'+i).className='tag t-ok';$('#tg'+i).textContent='Dikira';show('#om'+i,'Disimpan.',1)},
+async csv(){const h='Tarikh,Jenis,Bahan,Kuantiti,Unit,Nama,Catatan,Batal';const c=s=>'"'+String(s||'').replace(/"/g,'""')+'"';
+  csvText=[h,...[...S.tx].sort((a,b)=>a.d<b.d?-1:1).map(x=>[x.d,x.type,c(x.p),x.q,'Kg',c(x.n),c(x.r),c(x.v?x.vr:'')].join(','))].join('\n');
+  let dl=null;try{dl=await window.claude.use('downloads')}catch(e){}
+  if(dl){try{await dl.save({filename:'rekod-stok.csv',data:new Blob([csvText],{type:'text/csv'})});return}catch(e){if(e&&e.code==='declined')return}}
+  $('#csvbox').innerHTML='<p class="sub">Salin teks ini ke Excel:</p><textarea readonly style="width:100%;height:140px">'+esc(csvText)+'</textarea>'},
+async addprod(){const n=$('#np').value.trim();if(!n)return show('#npm','Tulis nama bahan.');
+  if(PRODUCTS.some(x=>x.toLowerCase()===n.toLowerCase()))return show('#npm','Bahan ini sudah ada.');
+  const {error}=await SB.from('products').insert({name:n,unit:'Kg'});
+  if(error)return show('#npm',esc(emsg(error)));
+  await load();render();show('#npm','Ditambah: '+esc(n)+'. Masukkan kiraan fizikal di senarai bawah.',1)},
+async logout(){await SB.auth.signOut();location.reload()}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&acts[b.dataset.act])acts[b.dataset.act](b)});
+const hintQty=()=>{const f=$('#fh'),v=parseFloat(($('#fq')||{}).value),u=($('#fu')||{}).value;if(f)f.textContent=(u==='g'&&v>0)?'= '+fmt(Math.round(v)/1000)+' Kg akan dimasukkan ke stok':''};
+document.addEventListener('input',e=>{
+  if(e.target.id==='fq'||e.target.id==='fu')hintQty();
+  if(e.target.id==='q'){q=e.target.value;updateList()}
+  if(e.target.id==='fp'){const p=e.target.value.trim(),f=$('#fb');f.textContent=!p?'':!PRODUCTS.includes(p)?'Bahan tidak dalam senarai.':hasOB(p)?'Baki sekarang: '+fmt(bal(p))+' Kg':'Kiraan permulaan belum dibuat.'}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='fu')hintQty();
+  if(e.target.id==='st'&&e.target.value){S.start=e.target.value;save();render()}
+  if(e.target.id==='cn')cn=e.target.value;
+  if(e.target.id==='fn')cn=e.target.value;
+});
+const toLocal=s=>{const d=new Date(s);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+async function all(mk){let o=[],f=0;for(;;){const {data,error}=await mk().range(f,f+999);if(error)throw error;o=o.concat(data);if(data.length<1000)return o;f+=1000}}
+async function load(){
+  const [pr,tx,st,se]=await Promise.all([all(()=>SB.from('products').select('id,name').eq('active',true).order('id')),
+    all(()=>SB.from('transactions').select('*').order('occurred_at').order('id')),
+    all(()=>SB.from('staff').select('name').eq('active',true).order('name')),all(()=>SB.from('app_settings').select('key,value'))]);
+  const nm={};PRODUCTS=pr.map(x=>{nm[x.id]=x.name;PID[x.name]=x.id;return x.name});
+  S.tx=tx.map(r=>({id:r.id,type:r.type,p:nm[r.product_id],q:+r.qty,d:toLocal(r.occurred_at),n:r.staff_name||'',r:r.remark||'',v:r.voided?1:0,vr:r.void_reason||''}));
+  S.staff=st.map(x=>x.name);const s=se.find(x=>x.key==='start_date');if(s)S.start=s.value;
+}
+async function boot(){
+  try{
+    const {data:{session}}=await SB.auth.getSession();
+    if(!session){document.body.className='out';return}
+    const {data:pf}=await SB.from('profiles').select('code,role').eq('user_id',session.user.id).maybeSingle();
+    if(!pf){await SB.auth.signOut();document.body.className='out';show('#lm','Akaun ini belum diberi peranan. Hubungi pentadbir.');return}
+    ME=pf;await load();document.body.className='';tab='dash';render();
+  }catch(e){document.body.className='out';show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')acts.login()});
+boot();
+</script>
+</body>
+</html>
