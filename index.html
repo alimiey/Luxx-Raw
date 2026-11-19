@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Luxx IMS">
 <title>Raw Material Stock</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -73,9 +80,12 @@ body.out header,body.out main,body.out nav{display:none}
 body:not(.out) #login{display:none}
 #login{max-width:360px;margin:12vh auto;padding:16px}
 nav button[hidden]{display:none}
+#off{background:var(--redbg);color:var(--red);text-align:center;padding:6px 12px;font-size:13px}
+#off[hidden]{display:none}
 </style>
 </head>
 <body class="out">
+<div id="off" hidden>Tiada internet. Rekod tidak boleh disimpan sehingga bersambung semula.</div>
 <div id="login"><h1>Stock System</h1><div class="sub">Log masuk</div>
 <label>Emel<input id="le" type="email" autocomplete="username"></label>
 <label>Kata laluan<input id="lp" type="password" autocomplete="current-password"></label>
@@ -94,6 +104,9 @@ nav button[hidden]{display:none}
 const SB_URL="https://xrlzyrorlwgsnkrkodpq.supabase.co",SB_KEY="sb_publishable_iIhF-ZnPhY5AxLiPUjAi4Q_9QVEDuWt";
 const SB=supabase.createClient(SB_URL,SB_KEY);
 let PRODUCTS=[],ME=null,MOD='raw',PROD=[],ALLTX=[];const PID={},NM={},UNIT={};
+let DEFERRED=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFERRED=e});
+const installBox=()=>matchMedia('(display-mode: standalone)').matches?'':'<h2>Pasang di telefon</h2>'+(DEFERRED?'<button data-act="install">Pasang app</button>':'<p class="sub">iPhone (Safari): tekan Share, lepas tu Add to Home Screen. Android (Chrome): tekan menu ⋮, lepas tu Install app.</p>');
 const U=p=>UNIT[p]||'Kg';
 const qs=(l,f)=>{const m={};l.forEach(x=>{const u=U(x.p);m[u]=(m[u]||0)+f(x)});const k=Object.keys(m);return k.length?k.map(u=>fmt(m[u])+' '+u).join(' · '):'0 '+(MOD==='raw'?'Kg':'Pcs')};
 const ALLOW={superuser:["dash","stok","tambah","rekod","kiraan","set"],operator:["dash","stok","tambah","rekod","set"],viewer:["dash","stok","rekod","set"]};
@@ -167,7 +180,7 @@ tambah(){
 rekod(){return search('Cari bahan atau nama')+chips(rt,[['all','Semua'],['IN','Masuk'],['OUT','Keluar'],['OB','Kiraan']],'rt')+'<div id="list"></div>'},
 kiraan(){return `<p class="sub">Kira stok fizikal dan masukkan di sini. Nilai ini jadi baki permulaan pada ${dmy(S.start+'T00:00').slice(0,10)}.</p>
   <label>Dikira oleh<input id="cn" value="${esc(cn)}" placeholder="Taip nama" autocomplete="off"></label>${ME.role==='superuser'?`<h2>${MOD==='raw'?'Tambah bahan baharu':'Tambah item baharu'}</h2><div class="ob" style="grid-template-columns:${MOD==='raw'?'1fr auto':'1fr 84px auto'}"><input id="np" placeholder="${MOD==='raw'?'Nama bahan':'Nama item'}" autocomplete="off" style="text-align:left">${MOD==='raw'?'':'<select id="npu"><option>Pcs</option><option>Roll</option></select>'}<button data-act="addprod">Tambah</button></div><div id="npm"></div>`:''}<div style="height:8px"></div>`+search('Cari bahan')+'<div id="list"></div>'},
-set(){return `<h2>Akaun</h2><div class="r"><span class="n">${esc(ME.code)}</span><span class="tag t-ok">${{superuser:'Superuser',operator:'Operator / QA & QC',viewer:'View only'}[ME.role]}</span></div>${ME.role==='superuser'?'<h2>Data</h2><button data-act="csv">Eksport rekod (CSV)</button><div id="csvbox"></div>':''}<div style="height:16px"></div><button data-act="logout">Log keluar</button>`}
+set(){return `<h2>Akaun</h2><div class="r"><span class="n">${esc(ME.code)}</span><span class="tag t-ok">${{superuser:'Superuser',operator:'Operator / QA & QC',viewer:'View only'}[ME.role]}</span></div>${ME.role==='superuser'?'<h2>Data</h2><button data-act="csv">Eksport rekod (CSV)</button><div id="csvbox"></div>':''}${installBox()}<div style="height:16px"></div><button data-act="logout">Log keluar</button>`}
 };
 const lists={
 stok(){const t=q.toLowerCase();return PRODUCTS.filter(p=>p.toLowerCase().includes(t)).map(p=>({p,o:hasOB(p),b:bal(p)})).filter(r=>flt==='all'||(flt==='u'&&!r.o)||(flt==='z'&&r.o&&r.b<=EPS)||(flt==='a'&&r.o&&r.b>EPS))
@@ -188,6 +201,7 @@ const show=(id,t,k)=>{const e=$(id);if(e)e.innerHTML=`<div class="msg ${k?'k':'e
 const acts={
 tab(b){const t=b.dataset.tab;tab=t;q='';vid=null;render();load().then(()=>{if(tab===t&&t!=='tambah'&&t!=='kiraan')render()}).catch(()=>{})},
 mod(b){MOD=b.dataset.k;try{localStorage.setItem('mod',MOD)}catch(e){}applyMod();q='';flt='all';rt='all';vid=null;render()},
+async install(){if(!DEFERRED)return;DEFERRED.prompt();try{await DEFERRED.userChoice}catch(e){}DEFERRED=null;render()},
 async login(){const {error}=await SB.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});if(error)return show('#lm','Emel atau kata laluan salah.');await boot()},
 dp(b){dp=b.dataset.k;render()},flt(b){flt=b.dataset.k;render()},rt(b){rt=b.dataset.k;render()},mode(b){mode=b.dataset.k;render()},
 async submit(){
@@ -260,6 +274,8 @@ async function boot(){
   }catch(e){document.body.className='out';show('#lm','Gagal memuatkan data: '+esc(e.message||e))}
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lp')acts.login()});
+const upd=()=>{$('#off').hidden=navigator.onLine};addEventListener('online',upd);addEventListener('offline',upd);upd();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 boot();
 </script>
 </body>
